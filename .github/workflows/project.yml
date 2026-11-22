@@ -5,7 +5,7 @@ name: Deploy project
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
     paths:
       - 'todo_app/**'
       - 'todo_backend/**'
@@ -65,17 +65,25 @@ jobs:
           curl -sLo sops https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64
           chmod +x sops && sudo mv sops /usr/local/bin/sops
 
+      # main goes to namespace project, every other branch to a namespace named after it
+      - name: Choose namespace
+        run: |
+          if [ "$BRANCH" = "main" ]; then NAMESPACE=project; else NAMESPACE=$BRANCH; fi
+          echo "NAMESPACE=$NAMESPACE" >> $GITHUB_ENV
+
       - name: Deploy
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
-          kubectl create namespace project || true
-          sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -f -
+          kubectl create namespace $NAMESPACE || true
+          kubectl config set-context --current --namespace=$NAMESPACE
+          sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -n $NAMESPACE -f -
           cd project
+          kustomize edit set namespace $NAMESPACE
           kustomize edit set image PROJECT/TODO_APP=$TODO_APP
           kustomize edit set image PROJECT/TODO_BACKEND=$TODO_BACKEND
           kustomize edit set image PROJECT/TODO_CRONJOB=$TODO_CRONJOB
           kustomize build . | kubectl apply -f -
-          kubectl rollout status -n project deployment todo-backend-dep
-          kubectl rollout status -n project deployment todo-app-dep
-          kubectl get ingress -n project
+          kubectl rollout status deployment todo-backend-dep
+          kubectl rollout status deployment todo-app-dep
+          kubectl get ingress

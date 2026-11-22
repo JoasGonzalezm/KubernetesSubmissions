@@ -42,6 +42,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [3.4.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.4/ping_pong)
 - [3.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.5/project)
 - [3.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.6/.github/workflows) (also [project](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.6/project))
+- [3.7.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.7/.github/workflows)
 
 ## Running
 
@@ -322,7 +323,7 @@ cache PVC uses the default storage class, so it works both in k3d and GKE.
 
 ```
 kubectl create namespace project
-sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -f -
+sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -n project -f -
 kubectl apply -k project
 kubectl get ingress -n project   # wait for ADDRESS
 ```
@@ -363,4 +364,15 @@ gh secret set SERVICE_ACCOUNT --body github-actions-sa@PROJECT_ID.iam.gserviceac
 gh secret set WORKLOAD_IDENTITY_PROVIDER \
   --body projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
 gh secret set SOPS_AGE_KEY < key.txt
+```
+
+### 3.7
+
+Every branch gets its own environment: `main` is deployed to the namespace `project` and any
+other branch to a namespace with the same name as the branch (`kustomize edit set namespace`).
+The database Secret has no namespace so it can be applied to any of them.
+
+```
+git switch -c feature-x && git push -u origin feature-x
+kubectl get all -n feature-x
 ```
