@@ -791,4 +791,4 @@ Used indirectly:
 - CoreDNS for the service names inside the clusters
 - Flannel as the network of k3s, Traefik as the k3s ingress controller
 - Envoy inside Istio, Envoy Gateway and Kourier
-- etcd as the storage of the Kubernetes API
+- etcd as the storage of the Kubernetes API in GKE
