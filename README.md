@@ -57,6 +57,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [4.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.5/todo_backend) (also [todo_app](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.5/todo_app))
 - [4.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.6/broadcaster) (also [todo_backend](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.6/todo_backend))
 - [4.7.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.7/log_output) (also [argocd](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.7/argocd) and [workflow](https://github.com/joasgonzalezm/KubernetesSubmissions/blob/4.7/.github/workflows/log-output.yml))
+- [4.8.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.8/project) (also [argocd](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.8/argocd) and [workflow](https://github.com/joasgonzalezm/KubernetesSubmissions/blob/4.8/.github/workflows/project.yml))
 
 ## Running
 
@@ -585,3 +586,16 @@ kubectl apply -f argocd/log-output.yaml
 ```
 
 The workflow needs "Read and write permissions" for GitHub Actions in the repository settings.
+
+### 4.8
+
+The project uses GitOps too. `.github/workflows/project.yml` now builds the five project
+images to GHCR, sets them in `project/kustomization.yaml` and commits it. The ArgoCD
+Application `argocd/project.yaml` deploys `project/` from main to the namespace `project`.
+The Secrets (database, storage key, webhook) are applied outside of ArgoCD.
+
+```sh
+kubectl create namespace project
+sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -n project -f -
+kubectl apply -f argocd/project.yaml
+```

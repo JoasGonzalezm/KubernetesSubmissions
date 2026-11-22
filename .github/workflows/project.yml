@@ -1,93 +1,49 @@
-# Builds the project images, pushes them to Artifact Registry and deploys the project to GKE.
-# Needs repository variable GKE_PROJECT and secrets WORKLOAD_IDENTITY_PROVIDER,
-# SERVICE_ACCOUNT and SOPS_AGE_KEY (see README).
-name: Deploy project
+# GitOps for the project: builds the images and commits the new tags to project/kustomization.yaml.
+# ArgoCD (argocd/project.yaml) notices the commit and deploys main to the cluster.
+name: Release project
 
 on:
   push:
-    branches: ['**']
+    branches: [main]
     paths:
       - 'todo_app/**'
       - 'todo_backend/**'
       - 'todo_cronjob/**'
       - 'todo_backup/**'
       - 'broadcaster/**'
-      - 'project/**'
       - '.github/workflows/project.yml'
 
 permissions:
-  contents: read
-  id-token: write
-
-env:
-  PROJECT_ID: ${{ vars.GKE_PROJECT }}
-  GKE_CLUSTER: dwk-cluster
-  GKE_ZONE: europe-north1-b
-  REGISTRY: europe-north1-docker.pkg.dev
-  REPOSITORY: dwk-repository
-  BRANCH: ${{ github.ref_name }}
+  contents: write
+  packages: write
 
 jobs:
-  build-publish-deploy:
-    name: Build, Publish and Deploy
-    if: vars.GKE_PROJECT != ''
+  build-publish-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: google-github-actions/auth@v3
+      - uses: docker/login-action@v3
         with:
-          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.SERVICE_ACCOUNT }}
-
-      - uses: google-github-actions/setup-gcloud@v3
-
-      - run: gcloud --quiet auth configure-docker $REGISTRY
-
-      - uses: google-github-actions/get-gke-credentials@v3
-        with:
-          cluster_name: ${{ env.GKE_CLUSTER }}
-          project_id: ${{ env.PROJECT_ID }}
-          location: ${{ env.GKE_ZONE }}
-
-      - name: Build and publish images
-        run: |
-          for APP in todo_app todo_backend todo_cronjob todo_backup broadcaster; do
-            NAME=$(echo $APP | tr '_' '-')
-            IMAGE_TAG=$REGISTRY/$PROJECT_ID/$REPOSITORY/$NAME:$BRANCH-$GITHUB_SHA
-            docker build --tag $IMAGE_TAG $APP
-            docker push $IMAGE_TAG
-            echo "$(echo $APP | tr '[:lower:]' '[:upper:]')=$IMAGE_TAG" >> $GITHUB_ENV
-          done
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: imranismail/setup-kustomize@v2
 
-      - name: Install SOPS
+      - name: Build, publish and set images
         run: |
-          curl -sLo sops https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64
-          chmod +x sops && sudo mv sops /usr/local/bin/sops
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          for APP in todo_app todo_backend todo_cronjob todo_backup broadcaster; do
+            NAME=$(echo $APP | tr '_' '-')
+            IMAGE=ghcr.io/$OWNER/$NAME:$GITHUB_SHA
+            docker build --tag $IMAGE $APP
+            docker push $IMAGE
+            PLACEHOLDER=PROJECT/$(echo $APP | tr '[:lower:]' '[:upper:]')
+            (cd project && kustomize edit set image $PLACEHOLDER=$IMAGE)
+          done
 
-      # main goes to namespace project, every other branch to a namespace named after it
-      - name: Choose namespace
-        run: |
-          if [ "$BRANCH" = "main" ]; then NAMESPACE=project; else NAMESPACE=$BRANCH; fi
-          echo "NAMESPACE=$NAMESPACE" >> $GITHUB_ENV
-
-      - name: Deploy
-        env:
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: |
-          kubectl create namespace $NAMESPACE || true
-          kubectl config set-context --current --namespace=$NAMESPACE
-          sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -n $NAMESPACE -f -
-          cd project
-          kustomize edit set namespace $NAMESPACE
-          kustomize edit set image PROJECT/TODO_APP=$TODO_APP
-          kustomize edit set image PROJECT/TODO_BACKEND=$TODO_BACKEND
-          kustomize edit set image PROJECT/TODO_CRONJOB=$TODO_CRONJOB
-          kustomize edit set image PROJECT/TODO_BACKUP=$TODO_BACKUP
-          kustomize edit set image PROJECT/BROADCASTER=$BROADCASTER
-          kustomize build . | kubectl apply -f -
-          kubectl rollout status deployment todo-backend-dep
-          kubectl rollout status deployment todo-app-dep
-          kubectl get ingress
+      - uses: EndBug/add-and-commit@v9
+        with:
+          add: project/kustomization.yaml
+          message: New project version ${{ github.sha }}
