@@ -712,3 +712,19 @@ kubectl apply -f wikipedia/manifests
 kubectl port-forward -n exercises svc/wikipedia-svc 8080:80   # open http://localhost:8080
 kubectl logs -n exercises deployment/wikipedia-dep -c random-article -f
 ```
+
+### 5.5 Platform comparison
+
+Rancher is better than OpenShift:
+
+- Rancher is free and open source; OpenShift needs paid Red Hat subscriptions for support
+- Rancher manages any CNCF conformant cluster (EKS, GKE, AKS, k3s, RKE2) from one UI, while
+  OpenShift is its own distribution and pulls you into the Red Hat ecosystem
+- Rancher runs on plain upstream Kubernetes, so `kubectl`, Helm and standard manifests work
+  as they are; OpenShift adds its own concepts (Routes, DeploymentConfigs, stricter
+  SecurityContextConstraints) that often need changes to manifests
+- Rancher is lightweight and can be installed with one Helm chart into an existing cluster;
+  OpenShift has heavy hardware requirements and a long installation
+- k3s from the same company makes Rancher a natural fit for edge and small clusters
+- OpenShift's strengths (integrated CI/CD, developer console, enterprise support) are things
+  a team can add to Rancher with tools of its own choice
