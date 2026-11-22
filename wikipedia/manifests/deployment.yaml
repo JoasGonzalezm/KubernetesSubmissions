@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: exercises
+  name: wikipedia-dep
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wikipedia
+  template:
+    metadata:
+      labels:
+        app: wikipedia
+    spec:
+      volumes:
+        - name: www
+          emptyDir: {}
+      initContainers:
+        # Fetches the Kubernetes article before nginx starts
+        - name: fetch-kubernetes
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - curl -sSfL -A dwk-wikipedia https://en.wikipedia.org/wiki/Kubernetes -o /www/index.html
+          volumeMounts:
+            - name: www
+              mountPath: /www
+      containers:
+        # Serves whatever is in the public www directory
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: www
+              mountPath: /usr/share/nginx/html
+        # Waits 5-15 minutes and replaces the page with a random article, forever
+        - name: random-article
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              while true; do
+                WAIT=$(( (RANDOM % 601) + 300 ))
+                echo "Waiting $WAIT seconds"
+                sleep $WAIT
+                curl -sSfL -A dwk-wikipedia https://en.wikipedia.org/wiki/Special:Random -o /www/new.html \
+                  && mv /www/new.html /www/index.html \
+                  && echo "Fetched a random article"
+              done
+          volumeMounts:
+            - name: www
+              mountPath: /www

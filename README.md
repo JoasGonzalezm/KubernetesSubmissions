@@ -66,6 +66,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [5.1.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.1/dummysite)
 - [5.2.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.2/istio)
 - [5.3.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.3/greeter) (also [log_output](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.3/log_output))
+- [5.4.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.4/wikipedia)
 
 ## Running
 
@@ -690,7 +691,24 @@ waypoint sends 75% of the traffic to `greeter-svc-1` (v1) and 25% to `greeter-sv
 ```sh
 kubectl apply -f namespaces/exercises.yaml
 istioctl waypoint apply -n exercises --enroll-namespace --wait
-kubectl apply -f greeter/manifests -k log_output
+kubectl apply -f greeter/manifests
+kubectl apply -k log_output
 for i in $(seq 20); do curl -s localhost:8081/ | grep greetings; done   # ~3/4 Hello, ~1/4 Hola
 istioctl dashboard kiali   # Traffic graph of the exercises namespace
+```
+
+### 5.4
+
+The Wikipedia app is one pod with three containers sharing an `emptyDir` volume:
+
+- init container `fetch-kubernetes` (curl) saves https://en.wikipedia.org/wiki/Kubernetes as
+  `index.html` before the others start
+- `nginx` serves the public www directory
+- sidecar `random-article` (curl) waits a random time between 5 and 15 minutes, saves a random
+  article from `Special:Random` as `index.html` and repeats
+
+```sh
+kubectl apply -f wikipedia/manifests
+kubectl port-forward -n exercises svc/wikipedia-svc 8080:80   # open http://localhost:8080
+kubectl logs -n exercises deployment/wikipedia-dep -c random-article -f
 ```
