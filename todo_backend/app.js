@@ -34,6 +34,15 @@ const sendJson = (res, status, body) => {
 }
 
 const server = http.createServer(async (req, res) => {
+  // Probes are not logged to keep the request log readable
+  if (req.method === 'GET' && req.url === '/healthz') {
+    try {
+      await pool.query('SELECT 1')
+      return sendJson(res, 200, { status: 'ok' })
+    } catch (error) {
+      return sendJson(res, 500, { status: 'database unavailable' })
+    }
+  }
   log('request', { method: req.method, url: req.url })
   try {
     if (req.method === 'GET' && req.url === '/todos') {

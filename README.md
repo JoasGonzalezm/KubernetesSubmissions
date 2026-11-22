@@ -51,44 +51,45 @@ Images are built by GitHub Actions on every tag and pushed to
 ### Chapter 5
 
 - [4.1.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.1/ping_pong) (also [log_output](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.1/log_output))
+- [4.2.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.2/todo_app) (also [todo_backend](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.2/todo_backend))
 
 ## Running
 
-```
+```sh
 k3d cluster create --port 8082:30080@agent:0 -p 8081:80@loadbalancer --agents 2
 ```
 
 ### 1.1
 
-```
+```sh
 kubectl create deployment log-output --image=ghcr.io/joasgonzalezm/log-output:1.1
 kubectl logs -f deployment/log-output
 ```
 
 ### 1.2
 
-```
+```sh
 kubectl create deployment todo-app --image=ghcr.io/joasgonzalezm/todo-app:1.2
 kubectl logs deployment/todo-app
 ```
 
 ### 1.3
 
-```
+```sh
 kubectl apply -f log_output/manifests/deployment.yaml
 kubectl logs -f deployment/log-output-dep
 ```
 
 ### 1.4
 
-```
+```sh
 kubectl apply -f todo_app/manifests/deployment.yaml
 kubectl logs deployment/todo-app-dep
 ```
 
 ### 1.5
 
-```
+```sh
 kubectl apply -f todo_app/manifests/deployment.yaml
 kubectl port-forward deployment/todo-app-dep 3003:3000
 # open http://localhost:3003
@@ -96,21 +97,21 @@ kubectl port-forward deployment/todo-app-dep 3003:3000
 
 ### 1.6
 
-```
+```sh
 kubectl apply -f todo_app/manifests
 # open http://localhost:8082
 ```
 
 ### 1.7
 
-```
+```sh
 kubectl apply -f log_output/manifests
 # open http://localhost:8081/status
 ```
 
 ### 1.8
 
-```
+```sh
 kubectl delete ingress log-output-ingress
 kubectl apply -f todo_app/manifests
 # open http://localhost:8081
@@ -120,7 +121,7 @@ kubectl apply -f todo_app/manifests
 
 The ping-pong app shares the ingress of log output (`log_output/manifests/ingress.yaml`).
 
-```
+```sh
 kubectl apply -f ping_pong/manifests -f log_output/manifests
 # open http://localhost:8081/pingpong
 ```
@@ -130,7 +131,7 @@ kubectl apply -f ping_pong/manifests -f log_output/manifests
 Log output is split into `log_output/writer` and `log_output/reader`, two containers
 in the same pod sharing an `emptyDir` volume.
 
-```
+```sh
 kubectl apply -f log_output/manifests
 kubectl logs deployment/log-output-dep -c log-writer
 # open http://localhost:8081/status
@@ -140,7 +141,7 @@ kubectl logs deployment/log-output-dep -c log-writer
 
 The PersistentVolume and its claim live in `volumes/` since they are not application specific.
 
-```
+```sh
 docker exec k3d-k3s-default-agent-0 mkdir -p /tmp/kube
 kubectl apply -f volumes -f ping_pong/manifests -f log_output/manifests
 # open http://localhost:8081/pingpong a few times, then http://localhost:8081/status
@@ -151,7 +152,7 @@ kubectl apply -f volumes -f ping_pong/manifests -f log_output/manifests
 The todo app caches an image from Lorem Picsum into a persistent volume for 10 minutes.
 `GET /shutdown` crashes the container to test that the cached image survives.
 
-```
+```sh
 docker exec k3d-k3s-default-agent-0 mkdir -p /tmp/kube-todo
 kubectl apply -f volumes -f todo_app/manifests
 # open http://localhost:8081
@@ -159,7 +160,7 @@ kubectl apply -f volumes -f todo_app/manifests
 
 ### 1.13
 
-```
+```sh
 kubectl apply -f todo_app/manifests
 # open http://localhost:8081
 ```
@@ -168,7 +169,7 @@ kubectl apply -f todo_app/manifests
 
 Log output asks ping-pong for the count over HTTP (`GET /pings`), no shared volume anymore.
 
-```
+```sh
 kubectl apply -f ping_pong/manifests -f log_output/manifests
 # open http://localhost:8081/pingpong a few times, then http://localhost:8081/status
 ```
@@ -178,7 +179,7 @@ kubectl apply -f ping_pong/manifests -f log_output/manifests
 `todo_backend` keeps the todos (`GET /todos`, `POST /todos`). The todo app renders them
 server side and forwards the form to the backend.
 
-```
+```sh
 kubectl apply -f volumes -f todo_backend/manifests -f todo_app/manifests
 # open http://localhost:8081
 ```
@@ -187,7 +188,7 @@ kubectl apply -f volumes -f todo_backend/manifests -f todo_app/manifests
 
 Log output and ping-pong live in the `exercises` namespace.
 
-```
+```sh
 kubectl apply -f namespaces/exercises.yaml
 kubectl apply -f ping_pong/manifests -f log_output/manifests
 kubectl get all -n exercises
@@ -197,7 +198,7 @@ kubectl get all -n exercises
 
 Everything of the project lives in the `project` namespace.
 
-```
+```sh
 kubectl apply -f namespaces/project.yaml
 kubectl apply -f volumes -f todo_backend/manifests -f todo_app/manifests
 kubectl get all -n project
@@ -208,7 +209,7 @@ kubectl get all -n project
 The ConfigMap `log_output/manifests/configmap.yaml` provides `information.txt` (mounted
 as a file) and `MESSAGE` (env variable).
 
-```
+```sh
 kubectl apply -f log_output/manifests
 # open http://localhost:8081/status
 ```
@@ -218,7 +219,7 @@ kubectl apply -f log_output/manifests
 The project apps have no hard coded configuration, everything comes from the ConfigMaps
 `todo_app/manifests/configmap.yaml` and `todo_backend/manifests/configmap.yaml`.
 
-```
+```sh
 kubectl apply -f volumes -f todo_backend/manifests -f todo_app/manifests
 ```
 
@@ -228,7 +229,7 @@ Ping-pong stores the counter in Postgres running as a StatefulSet. The database
 credentials are a Secret encrypted with [SOPS](https://github.com/getsops/sops) and age
 (`ping_pong/secrets/secret.enc.yaml`, see `.sops.yaml`).
 
-```
+```sh
 export SOPS_AGE_KEY_FILE=<path to key.txt>
 sops --decrypt ping_pong/secrets/secret.enc.yaml | kubectl apply -f -
 kubectl apply -f ping_pong/manifests
@@ -240,7 +241,7 @@ kubectl apply -f ping_pong/manifests
 The todo backend stores the todos in Postgres (StatefulSet). Connection settings come from
 the ConfigMap and the credentials from a SOPS encrypted Secret.
 
-```
+```sh
 sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -f -
 kubectl apply -f volumes -f todo_backend/manifests -f todo_app/manifests
 ```
@@ -249,7 +250,7 @@ kubectl apply -f volumes -f todo_backend/manifests -f todo_app/manifests
 
 A CronJob creates every hour a todo `Read <random Wikipedia article>`.
 
-```
+```sh
 kubectl apply -f todo_cronjob/manifests
 kubectl create job -n project --from=cronjob/wikipedia-todo wikipedia-todo-now   # run it right away
 ```
@@ -259,7 +260,7 @@ kubectl create job -n project --from=cronjob/wikipedia-todo wikipedia-todo-now  
 The backend logs every request as JSON and rejects todos longer than 140 characters.
 Logs are collected with Loki/Alloy and viewed in Grafana (`monitoring/`).
 
-```
+```sh
 sh monitoring/install.sh
 kubectl apply -f todo_backend/manifests
 kubectl port-forward -n project svc/todo-backend-svc 3001:2345 &
@@ -271,7 +272,7 @@ kubectl port-forward -n monitoring svc/grafana 3000:80
 
 ### GKE cluster (chapter 4 onwards)
 
-```
+```sh
 gcloud container clusters create dwk-cluster --zone=europe-north1-b --cluster-version=1.36 \
   --disk-size=32 --num-nodes=3 --machine-type=e2-small
 gcloud container clusters get-credentials dwk-cluster --zone=europe-north1-b
@@ -281,7 +282,7 @@ gcloud container clusters get-credentials dwk-cluster --zone=europe-north1-b
 
 Ping-pong (with its Postgres) in GKE, exposed with a LoadBalancer service.
 
-```
+```sh
 kubectl apply -f namespaces/exercises.yaml
 sops --decrypt ping_pong/secrets/secret.enc.yaml | kubectl apply -f -
 kubectl apply -f ping_pong/manifests
@@ -294,7 +295,7 @@ kubectl get svc -n exercises ping-pong-svc   # wait for EXTERNAL-IP
 Log output and ping-pong in GKE behind an Ingress: `/` goes to log output and `/pingpong`
 to ping-pong. Both apps answer 200 in `/` for the GKE health check.
 
-```
+```sh
 kubectl apply -f ping_pong/manifests -f log_output/manifests
 kubectl get ingress -n exercises   # wait for ADDRESS
 # open http://<ADDRESS>/ and http://<ADDRESS>/pingpong
@@ -305,7 +306,7 @@ kubectl get ingress -n exercises   # wait for ADDRESS
 The Ingress is replaced with the Gateway API: a Gateway (`log_output/manifests/gateway.yaml`)
 and one HTTPRoute per app.
 
-```
+```sh
 gcloud container clusters update dwk-cluster --location=europe-north1-b --gateway-api=standard
 kubectl delete ingress -n exercises log-output-ingress
 kubectl apply -f ping_pong/manifests -f log_output/manifests
@@ -318,7 +319,7 @@ The ping-pong HTTPRoute rewrites `/pingpong` to `/`, so the app itself serves th
 `/`. The GKE health check is pointed to `/healthz` with a HealthCheckPolicy so it does not
 increase the counter.
 
-```
+```sh
 kubectl apply -f ping_pong/manifests
 # open http://<ADDRESS>/pingpong
 ```
@@ -329,7 +330,7 @@ The project is deployed with Kustomize: `project/kustomization.yaml` combines th
 of todo_app, todo_backend and todo_cronjob, sets the namespace and the images. The image
 cache PVC uses the default storage class, so it works both in k3d and GKE.
 
-```
+```sh
 kubectl create namespace project
 sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -n project -f -
 kubectl apply -k project
@@ -344,7 +345,7 @@ Registry and deploys the project with Kustomize on every push to main. The todo 
 
 One time setup in Google Cloud (replace `PROJECT_ID` and `PROJECT_NUMBER`):
 
-```
+```sh
 gcloud artifacts repositories create dwk-repository --repository-format=docker --location=europe-north1
 
 gcloud iam service-accounts create github-actions-sa --display-name="GitHub Actions SA"
@@ -366,7 +367,7 @@ gcloud iam service-accounts add-iam-policy-binding \
 
 GitHub configuration:
 
-```
+```sh
 gh variable set GKE_PROJECT --body PROJECT_ID
 gh secret set SERVICE_ACCOUNT --body github-actions-sa@PROJECT_ID.iam.gserviceaccount.com
 gh secret set WORKLOAD_IDENTITY_PROVIDER \
@@ -380,7 +381,7 @@ Every branch gets its own environment: `main` is deployed to the namespace `proj
 other branch to a namespace with the same name as the branch (`kustomize edit set namespace`).
 The database Secret has no namespace so it can be applied to any of them.
 
-```
+```sh
 git switch -c feature-x && git push -u origin feature-x
 kubectl get all -n feature-x
 ```
@@ -390,7 +391,7 @@ kubectl get all -n feature-x
 `.github/workflows/delete-environment.yml` deletes the namespace of a branch when the branch is
 deleted (the `main` environment is never deleted).
 
-```
+```sh
 git push origin --delete feature-x
 kubectl get namespace feature-x   # gone after the workflow has run
 ```
@@ -437,7 +438,7 @@ The CronJob `todo_backup` runs `pg_dump` once a day and uploads the gzipped dump
 Google Cloud Storage bucket `dwk-todo-backups`. The service account key is created from the
 command line and never stored in GitHub:
 
-```
+```sh
 gcloud storage buckets create gs://dwk-todo-backups --location=europe-north1
 gcloud iam service-accounts create my-storage-sa --display-name="Pod Storage SA"
 gcloud projects add-iam-policy-binding PROJECT_ID --role=roles/storage.objectCreator \
@@ -467,7 +468,7 @@ around 30-40Mi of memory and almost no CPU, so they request little and are limit
 | wikipedia-todo (CronJob) | 10m / 100m | 32Mi / 64Mi |
 | backup (CronJob) | 50m / 500m | 128Mi / 256Mi |
 
-```
+```sh
 kubectl top pods -n project
 ```
 
@@ -476,10 +477,24 @@ kubectl top pods -n project
 Readiness probes: ping-pong is ready (`/healthz`) only when the database answers, and the log
 output reader only when ping-pong responds with the count. Without the database:
 
-```
+```sh
 kubectl delete statefulset -n exercises ping-pong-db
 kubectl get po -n exercises
 # log-output-dep-...   1/2   Running
 # ping-pong-dep-...    0/1   Running
 kubectl apply -f ping_pong/manifests/postgres.yaml   # both become ready
+```
+
+### 4.2
+
+Probes for the project:
+
+- todo-backend: readiness `/healthz` checks the database connection
+- todo-app: readiness `/ready` checks that the backend (and so the database) answers, liveness
+  `/healthz` fails after the "Break the app" button is pressed, so Kubernetes restarts the
+  container and the app is healthy again
+
+```sh
+kubectl apply -k project
+kubectl get po -n project -w   # press "Break the app" and watch RESTARTS increase
 ```

@@ -64,6 +64,18 @@ const createTodo = async (text) => {
   })
 }
 
+// The "break the app" button sets this to false, which makes the liveness probe fail
+let isHealthy = true
+
+const backendReady = async () => {
+  try {
+    const response = await fetch(`${TODO_BACKEND_URL}/healthz`, { signal: AbortSignal.timeout(2000) })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
 const readBody = (req) => new Promise((resolve, reject) => {
   let data = ''
   req.on('data', (chunk) => { data += chunk })
@@ -92,12 +104,36 @@ const page = (todos) => `<!DOCTYPE html>
     <ul>
       ${todos.map((todo) => `<li>${escapeHtml(todo.text)}</li>`).join('\n      ')}
     </ul>
+    <form method="POST" action="/break">
+      <button type="submit">Break the app</button>
+    </form>
     <p>DevOps with Kubernetes 2026</p>
   </body>
 </html>`
 
 const server = http.createServer(async (req, res) => {
   try {
+    // Liveness probe
+    if (req.method === 'GET' && req.url === '/healthz') {
+      res.writeHead(isHealthy ? 200 : 500, { 'Content-Type': 'application/json' })
+      return res.end(JSON.stringify({ status: isHealthy ? 'ok' : 'unhealthy' }))
+    }
+    // Readiness probe: healthy and the backend (and its database) answers
+    if (req.method === 'GET' && req.url === '/ready') {
+      const ready = isHealthy && await backendReady()
+      res.writeHead(ready ? 200 : 500, { 'Content-Type': 'application/json' })
+      return res.end(JSON.stringify({ status: ready ? 'ready' : 'not ready' }))
+    }
+    if (!isHealthy) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' })
+      return res.end('The app is broken')
+    }
+    if (req.method === 'POST' && req.url === '/break') {
+      isHealthy = false
+      console.log('The app was broken on purpose')
+      res.writeHead(302, { Location: '/' })
+      return res.end()
+    }
     if (req.method === 'GET' && req.url === '/') {
       await ensureImage()
       const todos = await fetchTodos()
