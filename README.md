@@ -53,6 +53,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [4.1.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.1/ping_pong) (also [log_output](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.1/log_output))
 - [4.2.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.2/todo_app) (also [todo_backend](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.2/todo_backend))
 - [4.3.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.3#43-prometheus)
+- [4.4.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.4/ping_pong)
 
 ## Running
 
@@ -516,3 +517,20 @@ count(kube_pod_info{namespace="prometheus", created_by_kind="StatefulSet"})
 
 With the monitoring stack of this repository the pods are in the namespace `monitoring`, so
 there the query is `count(kube_pod_info{namespace="monitoring", created_by_kind="StatefulSet"})`.
+
+### 4.4
+
+Ping-pong is now an Argo Rollout with a canary strategy. After half of the pods run the new
+version, the AnalysisTemplate `cpu-usage` follows the CPU usage rate sum of all containers in
+the `exercises` namespace once a minute for 5 minutes. If it goes over 0.3 cores the rollout is
+aborted and the old version is kept. Setting `successCondition` very low (e.g. `result < 0.001`)
+makes every update fail, so the application is not updated.
+
+```sh
+kubectl create namespace argo-rollouts
+kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+kubectl delete deployment -n exercises ping-pong-dep
+kubectl apply -f ping_pong/manifests
+# change the image tag and apply again, then follow:
+kubectl argo rollouts get rollout ping-pong-dep -n exercises --watch
+```
