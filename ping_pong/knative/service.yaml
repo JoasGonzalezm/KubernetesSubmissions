@@ -1,0 +1,31 @@
+# Ping-pong as a Knative Service: it scales to zero when nobody calls it
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  namespace: exercises
+  name: ping-pong
+spec:
+  template:
+    spec:
+      containers:
+        - image: ghcr.io/joasgonzalezm/ping-pong:5.7
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /healthz
+          env:
+            - name: PGHOST
+              value: ping-pong-db-svc
+            - name: PGDATABASE
+              value: pingpong
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: ping-pong-db-secret
+                  key: POSTGRES_USER
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ping-pong-db-secret
+                  key: POSTGRES_PASSWORD

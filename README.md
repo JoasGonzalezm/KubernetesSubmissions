@@ -69,6 +69,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [5.4.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.4/wikipedia)
 - [5.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.5#55-platform-comparison)
 - [5.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.6/knative)
+- [5.7.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.7/ping_pong/knative) (also [log_output](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.7/log_output))
 
 ## Running
 
@@ -748,4 +749,23 @@ kubectl get ksvc hello
 curl -H "Host: hello.default.<IP>.sslip.io" http://localhost:8081
 kubectl get pods -w          # pods scale to zero after ~60s without traffic
 kubectl get revisions        # hello-world and hello-knative get 50% each
+```
+
+### 5.7
+
+Ping-pong runs serverless as a Knative Service (`ping_pong/knative/service.yaml`) instead of
+the Rollout. Knative sets `PORT` for the container, and the database is the same StatefulSet.
+The log output calls it with the fully qualified name
+`http://ping-pong.exercises.svc.cluster.local/pings`, and the HTTPRoute in
+`ping_pong/knative/route.yaml` rewrites `/pingpong` to the Knative host name so it also works
+from the browser.
+
+```sh
+kubectl delete rollout -n exercises ping-pong-dep
+kubectl delete svc -n exercises ping-pong-svc
+sops --decrypt ping_pong/secrets/secret.enc.yaml | kubectl apply -f -
+kubectl apply -f ping_pong/manifests/postgres.yaml -f ping_pong/knative/service.yaml
+kubectl get ksvc -n exercises ping-pong   # use the IP of the URL in route.yaml
+kubectl apply -f ping_pong/knative/route.yaml
+kubectl apply -k log_output
 ```
