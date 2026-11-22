@@ -10,6 +10,7 @@ on:
       - 'todo_app/**'
       - 'todo_backend/**'
       - 'todo_cronjob/**'
+      - 'todo_backup/**'
       - 'project/**'
       - '.github/workflows/project.yml'
 
@@ -50,7 +51,7 @@ jobs:
 
       - name: Build and publish images
         run: |
-          for APP in todo_app todo_backend todo_cronjob; do
+          for APP in todo_app todo_backend todo_cronjob todo_backup; do
             NAME=$(echo $APP | tr '_' '-')
             IMAGE_TAG=$REGISTRY/$PROJECT_ID/$REPOSITORY/$NAME:$BRANCH-$GITHUB_SHA
             docker build --tag $IMAGE_TAG $APP
@@ -83,6 +84,7 @@ jobs:
           kustomize edit set image PROJECT/TODO_APP=$TODO_APP
           kustomize edit set image PROJECT/TODO_BACKEND=$TODO_BACKEND
           kustomize edit set image PROJECT/TODO_CRONJOB=$TODO_CRONJOB
+          kustomize edit set image PROJECT/TODO_BACKUP=$TODO_BACKUP
           kustomize build . | kubectl apply -f -
           kubectl rollout status deployment todo-backend-dep
           kubectl rollout status deployment todo-app-dep

@@ -45,6 +45,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [3.7.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.7/.github/workflows)
 - [3.8.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.8/.github/workflows)
 - [3.9.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.9#39-dbaas-vs-diy)
+- [3.10.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.10/todo_backup)
 
 ## Running
 
@@ -424,3 +425,25 @@ is what the project does now.
 basically solved. DIY is cheaper and portable, which is fine for a course project or
 development environments, but for production data the operational work and risk of DIY
 usually costs more than the DBaaS bill.
+
+### 3.10
+
+The CronJob `todo_backup` runs `pg_dump` once a day and uploads the gzipped dump to the
+Google Cloud Storage bucket `dwk-todo-backups`. The service account key is created from the
+command line and never stored in GitHub:
+
+```
+gcloud storage buckets create gs://dwk-todo-backups --location=europe-north1
+gcloud iam service-accounts create my-storage-sa --display-name="Pod Storage SA"
+gcloud projects add-iam-policy-binding PROJECT_ID --role=roles/storage.objectCreator \
+  --member=serviceAccount:my-storage-sa@PROJECT_ID.iam.gserviceaccount.com
+gcloud projects add-iam-policy-binding PROJECT_ID --role=roles/storage.objectViewer \
+  --member=serviceAccount:my-storage-sa@PROJECT_ID.iam.gserviceaccount.com
+gcloud iam service-accounts keys create key.json \
+  --iam-account=my-storage-sa@PROJECT_ID.iam.gserviceaccount.com
+kubectl create secret generic storage-sa-key -n project --from-file=key.json=key.json
+rm key.json
+
+kubectl create job -n project --from=cronjob/todo-db-backup todo-db-backup-now   # test it
+gcloud storage ls gs://dwk-todo-backups
+```
