@@ -1,6 +1,6 @@
 # Every tagged commit is released to production. The images for the tag are built by the
-# "Build images" workflow, after it succeeds the tag is set in project/overlays/production
-# and committed to main, where ArgoCD (argocd/project-production.yaml) picks it up.
+# "Build images" workflow; after it succeeds the tag is committed to overlays/production in
+# the configuration repository, where ArgoCD picks it up.
 name: Release project to production
 
 on:
@@ -9,7 +9,10 @@ on:
     types: [completed]
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  CONFIG_REPO: JoasGonzalezm/KubernetesSubmissions-config
 
 jobs:
   release-production:
@@ -18,14 +21,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          repository: ${{ env.CONFIG_REPO }}
+          ssh-key: ${{ secrets.CONFIG_REPO_DEPLOY_KEY }}
 
       - uses: imranismail/setup-kustomize@v2
 
       - name: Use the images of the tag
         env:
           TAG: ${{ github.event.workflow_run.head_branch }}
-        working-directory: project/overlays/production
+        working-directory: overlays/production
         run: |
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           for APP in todo_app todo_backend todo_cronjob todo_backup broadcaster; do
@@ -36,6 +40,6 @@ jobs:
 
       - uses: EndBug/add-and-commit@v9
         with:
-          add: project/overlays/production/kustomization.yaml
+          add: overlays/production/kustomization.yaml
           message: Release ${{ github.event.workflow_run.head_branch }} to production
           pull: '--rebase --autostash'

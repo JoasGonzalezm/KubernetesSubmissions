@@ -59,6 +59,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [4.7.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.7/log_output) (also [argocd](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.7/argocd) and [workflow](https://github.com/joasgonzalezm/KubernetesSubmissions/blob/4.7/.github/workflows/log-output.yml))
 - [4.8.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.8/project) (also [argocd](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.8/argocd) and [workflow](https://github.com/joasgonzalezm/KubernetesSubmissions/blob/4.8/.github/workflows/project.yml))
 - [4.9.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.9/project) (also [argocd](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.9/argocd) and [workflows](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.9/.github/workflows))
+- [4.10.](https://github.com/JoasGonzalezm/KubernetesSubmissions-config) (configuration repository, and the [workflows](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.10/.github/workflows) of this repository)
 
 ## Running
 
@@ -626,3 +627,18 @@ kubectl create secret generic broadcaster-secret -n production --from-literal=WE
 kubectl create secret generic storage-sa-key -n production --from-file=key.json=key.json
 kubectl apply -f argocd/project-staging.yaml -f argocd/project-production.yaml
 ```
+
+### 4.10
+
+The code and the configuration of the project are now in different repositories:
+
+- this repository has the code of the project services (`todo_app`, `todo_backend`,
+  `todo_cronjob`, `todo_backup`, `broadcaster`) and the workflows that build them
+- [KubernetesSubmissions-config](https://github.com/JoasGonzalezm/KubernetesSubmissions-config)
+  has all the Kubernetes configuration: the manifests, the Kustomize base and the staging and
+  production overlays, the ArgoCD Applications and the encrypted secrets
+
+`project.yml` (commit to main → staging) and `production.yml` (tag → production) check out the
+configuration repository with a deploy key (secret `CONFIG_REPO_DEPLOY_KEY`), set the new image
+tags with `kustomize edit` and push the commit there. ArgoCD follows the configuration
+repository, so the instructions of the earlier project exercises now apply to that repository.
