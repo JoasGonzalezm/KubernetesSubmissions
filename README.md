@@ -41,6 +41,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [3.3.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.3/log_output) (also [ping_pong](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.3/ping_pong))
 - [3.4.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.4/ping_pong)
 - [3.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.5/project)
+- [3.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.6/.github/workflows) (also [project](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.6/project))
 
 ## Running
 
@@ -324,4 +325,42 @@ kubectl create namespace project
 sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -f -
 kubectl apply -k project
 kubectl get ingress -n project   # wait for ADDRESS
+```
+
+### 3.6
+
+`.github/workflows/project.yml` builds the three project images, pushes them to Artifact
+Registry and deploys the project with Kustomize on every push to main. The todo app uses the
+`Recreate` strategy since its image cache PVC is `ReadWriteOnce`.
+
+One time setup in Google Cloud (replace `PROJECT_ID` and `PROJECT_NUMBER`):
+
+```
+gcloud artifacts repositories create dwk-repository --repository-format=docker --location=europe-north1
+
+gcloud iam service-accounts create github-actions-sa --display-name="GitHub Actions SA"
+gcloud projects add-iam-policy-binding PROJECT_ID --role=roles/artifactregistry.writer \
+  --member=serviceAccount:github-actions-sa@PROJECT_ID.iam.gserviceaccount.com
+gcloud projects add-iam-policy-binding PROJECT_ID --role=roles/container.admin \
+  --member=serviceAccount:github-actions-sa@PROJECT_ID.iam.gserviceaccount.com
+
+gcloud iam workload-identity-pools create github-pool --location=global
+gcloud iam workload-identity-pools providers create-oidc github-provider --location=global \
+  --workload-identity-pool=github-pool \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+  --attribute-condition="assertion.repository=='JoasGonzalezm/KubernetesSubmissions'" \
+  --issuer-uri=https://token.actions.githubusercontent.com
+gcloud iam service-accounts add-iam-policy-binding \
+  github-actions-sa@PROJECT_ID.iam.gserviceaccount.com --role=roles/iam.workloadIdentityUser \
+  --member="principalSet://iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/attribute.repository/JoasGonzalezm/KubernetesSubmissions"
+```
+
+GitHub configuration:
+
+```
+gh variable set GKE_PROJECT --body PROJECT_ID
+gh secret set SERVICE_ACCOUNT --body github-actions-sa@PROJECT_ID.iam.gserviceaccount.com
+gh secret set WORKLOAD_IDENTITY_PROVIDER \
+  --body projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+gh secret set SOPS_AGE_KEY < key.txt
 ```
