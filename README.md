@@ -58,6 +58,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [4.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.6/broadcaster) (also [todo_backend](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.6/todo_backend))
 - [4.7.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.7/log_output) (also [argocd](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.7/argocd) and [workflow](https://github.com/joasgonzalezm/KubernetesSubmissions/blob/4.7/.github/workflows/log-output.yml))
 - [4.8.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.8/project) (also [argocd](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.8/argocd) and [workflow](https://github.com/joasgonzalezm/KubernetesSubmissions/blob/4.8/.github/workflows/project.yml))
+- [4.9.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.9/project) (also [argocd](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.9/argocd) and [workflows](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.9/.github/workflows))
 
 ## Running
 
@@ -598,4 +599,30 @@ The Secrets (database, storage key, webhook) are applied outside of ArgoCD.
 kubectl create namespace project
 sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -n project -f -
 kubectl apply -f argocd/project.yaml
+```
+
+### 4.9
+
+The project has two environments built with Kustomize overlays on top of `project/base`:
+
+| | staging | production |
+|---|---|---|
+| Namespace | `staging` | `production` |
+| Deployed when | every commit to main (`project.yml`) | every tagged commit (`production.yml`) |
+| Broadcaster | only logs the messages (`WEBHOOK_URL` removed by a patch) | forwards to the webhook |
+| Database backup | no | daily CronJob (`todo_backup`) |
+| ArgoCD Application | `argocd/project-staging.yaml` | `argocd/project-production.yaml` |
+
+`production.yml` runs after the images of a tag have been built by `images.yml` and commits
+the tag to `project/overlays/production/kustomization.yaml`. The Secrets are applied outside
+of ArgoCD:
+
+```sh
+for NS in staging production; do
+  kubectl create namespace $NS
+  sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -n $NS -f -
+done
+kubectl create secret generic broadcaster-secret -n production --from-literal=WEBHOOK_URL=<url>
+kubectl create secret generic storage-sa-key -n production --from-file=key.json=key.json
+kubectl apply -f argocd/project-staging.yaml -f argocd/project-production.yaml
 ```

@@ -1,6 +1,6 @@
-# GitOps for the project: builds the images and commits the new tags to project/kustomization.yaml.
-# ArgoCD (argocd/project.yaml) notices the commit and deploys main to the cluster.
-name: Release project
+# GitOps for the project: every commit to main is built and released to staging by committing
+# the new image tags to project/overlays/staging (ArgoCD app argocd/project-staging.yaml).
+name: Release project to staging
 
 on:
   push:
@@ -40,10 +40,10 @@ jobs:
             docker build --tag $IMAGE $APP
             docker push $IMAGE
             PLACEHOLDER=PROJECT/$(echo $APP | tr '[:lower:]' '[:upper:]')
-            (cd project && kustomize edit set image $PLACEHOLDER=$IMAGE)
+            (cd project/overlays/staging && kustomize edit set image $PLACEHOLDER=$IMAGE)
           done
 
       - uses: EndBug/add-and-commit@v9
         with:
-          add: project/kustomization.yaml
-          message: New project version ${{ github.sha }}
+          add: project/overlays/staging/kustomization.yaml
+          message: Release to staging ${{ github.sha }}
