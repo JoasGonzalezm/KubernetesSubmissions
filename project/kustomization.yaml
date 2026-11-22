@@ -9,13 +9,13 @@ resources:
 images:
   - name: PROJECT/TODO_APP
     newName: ghcr.io/joasgonzalezm/todo-app
-    newTag: "4.2"
+    newTag: "4.5"
   - name: PROJECT/TODO_BACKEND
     newName: ghcr.io/joasgonzalezm/todo-backend
-    newTag: "4.2"
+    newTag: "4.5"
   - name: PROJECT/TODO_CRONJOB
     newName: ghcr.io/joasgonzalezm/todo-cronjob
-    newTag: "4.2"
+    newTag: "4.5"
   - name: PROJECT/TODO_BACKUP
     newName: ghcr.io/joasgonzalezm/todo-backup
-    newTag: "4.2"
+    newTag: "4.5"

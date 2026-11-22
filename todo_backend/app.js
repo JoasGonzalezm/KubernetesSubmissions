@@ -72,6 +72,25 @@ const server = http.createServer(async (req, res) => {
       log('todo created', { todo: rows[0].text })
       return sendJson(res, 201, rows[0])
     }
+    const todoMatch = req.url.match(/^\/todos\/(\d+)$/)
+    if (req.method === 'PUT' && todoMatch) {
+      let done
+      try {
+        done = JSON.parse(await readBody(req)).done
+      } catch {
+        return sendJson(res, 400, { error: 'invalid JSON' })
+      }
+      if (typeof done !== 'boolean') {
+        return sendJson(res, 400, { error: 'done must be a boolean' })
+      }
+      const { rows } = await pool.query(
+        'UPDATE todos SET done = $1 WHERE id = $2 RETURNING id, text, done',
+        [done, Number(todoMatch[1])],
+      )
+      if (rows.length === 0) return sendJson(res, 404, { error: 'todo not found' })
+      log('todo updated', { id: rows[0].id, done: rows[0].done })
+      return sendJson(res, 200, rows[0])
+    }
     sendJson(res, 404, { error: 'not found' })
   } catch (error) {
     console.error(error)

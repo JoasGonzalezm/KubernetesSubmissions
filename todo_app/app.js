@@ -56,6 +56,14 @@ const fetchTodos = async () => {
   return response.json()
 }
 
+const markDone = async (id) => {
+  await fetch(`${TODO_BACKEND_URL}/todos/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ done: true }),
+  })
+}
+
 const createTodo = async (text) => {
   await fetch(`${TODO_BACKEND_URL}/todos`, {
     method: 'POST',
@@ -101,8 +109,18 @@ const page = (todos) => `<!DOCTYPE html>
       <input name="todo" maxlength="140" required>
       <button type="submit">Create todo</button>
     </form>
+    <h2>Todo</h2>
     <ul>
-      ${todos.map((todo) => `<li>${escapeHtml(todo.text)}</li>`).join('\n      ')}
+      ${todos.filter((todo) => !todo.done).map((todo) => `<li>
+        ${escapeHtml(todo.text)}
+        <form method="POST" action="/todos/${todo.id}/done" style="display: inline">
+          <button type="submit">Mark as done</button>
+        </form>
+      </li>`).join('\n      ')}
+    </ul>
+    <h2>Done</h2>
+    <ul>
+      ${todos.filter((todo) => todo.done).map((todo) => `<li>${escapeHtml(todo.text)}</li>`).join('\n      ')}
     </ul>
     <form method="POST" action="/break">
       <button type="submit">Break the app</button>
@@ -143,6 +161,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && req.url === '/todos') {
       const text = new URLSearchParams(await readBody(req)).get('todo')
       if (text) await createTodo(text)
+      res.writeHead(302, { Location: '/' })
+      return res.end()
+    }
+    const doneMatch = req.url.match(/^\/todos\/(\d+)\/done$/)
+    if (req.method === 'POST' && doneMatch) {
+      await markDone(doneMatch[1])
       res.writeHead(302, { Location: '/' })
       return res.end()
     }

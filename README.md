@@ -54,6 +54,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [4.2.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.2/todo_app) (also [todo_backend](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.2/todo_backend))
 - [4.3.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.3#43-prometheus)
 - [4.4.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.4/ping_pong)
+- [4.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.5/todo_backend) (also [todo_app](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.5/todo_app))
 
 ## Running
 
@@ -533,4 +534,13 @@ kubectl delete deployment -n exercises ping-pong-dep
 kubectl apply -f ping_pong/manifests
 # change the image tag and apply again, then follow:
 kubectl argo rollouts get rollout ping-pong-dep -n exercises --watch
+```
+
+### 4.5
+
+Todos have a done field. The backend has `PUT /todos/<id>` (body `{"done": true}`) and the
+todo app lists not done and done todos separately with a "Mark as done" button.
+
+```sh
+curl -X PUT -H 'Content-Type: application/json' -d '{"done":true}' localhost:3001/todos/1
 ```
