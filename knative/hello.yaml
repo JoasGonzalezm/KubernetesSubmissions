@@ -1,0 +1,26 @@
+# Deploying a Knative Service, Autoscaling and Traffic splitting from the Knative getting started.
+# First apply with revision hello-world, then change to hello-knative to try the traffic split.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: hello
+spec:
+  template:
+    metadata:
+      name: hello-knative
+      annotations:
+        # scale to zero when idle, at most 10 concurrent requests per pod
+        autoscaling.knative.dev/target: "10"
+    spec:
+      containers:
+        - image: ghcr.io/knative/helloworld-go:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: TARGET
+              value: Knative
+  traffic:
+    - latestRevision: true
+      percent: 50
+    - revisionName: hello-world
+      percent: 50

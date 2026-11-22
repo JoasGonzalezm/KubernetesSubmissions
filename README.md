@@ -67,6 +67,8 @@ Images are built by GitHub Actions on every tag and pushed to
 - [5.2.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.2/istio)
 - [5.3.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.3/greeter) (also [log_output](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.3/log_output))
 - [5.4.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.4/wikipedia)
+- [5.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.5#55-platform-comparison)
+- [5.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.6/knative)
 
 ## Running
 
@@ -728,3 +730,22 @@ Rancher is better than OpenShift:
 - k3s from the same company makes Rancher a natural fit for edge and small clusters
 - OpenShift's strengths (integrated CI/CD, developer console, enterprise support) are things
   a team can add to Rancher with tools of its own choice
+
+### 5.6
+
+Knative Serving with Kourier and sslip.io DNS in a k3d cluster without Traefik
+(`knative/install.sh`), and the getting started examples: a Knative Service, autoscaling
+(scale to zero) and traffic splitting between two revisions (`knative/hello.yaml`).
+
+If the Knative pods crash at start, their logs show the problem; in k3d it is usually the
+Kubernetes version, which is why the cluster is created with k3s v1.34.
+
+```sh
+sh knative/install.sh
+# first revision: name hello-world, no traffic block
+kubectl apply -f knative/hello.yaml
+kubectl get ksvc hello
+curl -H "Host: hello.default.<IP>.sslip.io" http://localhost:8081
+kubectl get pods -w          # pods scale to zero after ~60s without traffic
+kubectl get revisions        # hello-world and hello-knative get 50% each
+```
