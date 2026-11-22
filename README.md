@@ -65,6 +65,7 @@ Images are built by GitHub Actions on every tag and pushed to
 
 - [5.1.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.1/dummysite)
 - [5.2.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.2/istio)
+- [5.3.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.3/greeter) (also [log_output](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.3/log_output))
 
 ## Running
 
@@ -676,4 +677,20 @@ sh monitoring/install.sh
 sh istio/setup.sh
 kubectl port-forward svc/bookinfo-gateway-istio 8080:80   # http://localhost:8080/productpage
 istioctl dashboard kiali
+```
+
+### 5.3
+
+The log output app runs in the ambient mesh (the `exercises` namespace has the label
+`istio.io/dataplane-mode: ambient`) and shows a greeting from the new `greeter` service.
+There are two versions of the greeter (v1 "Hello", v2 "Hola"). The HTTPRoute
+`greeter/manifests/route.yaml` is attached to the service `greeter-svc` and the namespace
+waypoint sends 75% of the traffic to `greeter-svc-1` (v1) and 25% to `greeter-svc-2` (v2).
+
+```sh
+kubectl apply -f namespaces/exercises.yaml
+istioctl waypoint apply -n exercises --enroll-namespace --wait
+kubectl apply -f greeter/manifests -k log_output
+for i in $(seq 20); do curl -s localhost:8081/ | grep greetings; done   # ~3/4 Hello, ~1/4 Hola
+istioctl dashboard kiali   # Traffic graph of the exercises namespace
 ```

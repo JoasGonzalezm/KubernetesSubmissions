@@ -7,6 +7,7 @@ const FILE_PATH = process.env.LOG_FILE || path.join(__dirname, 'files', 'log.txt
 const PINGPONG_URL = process.env.PINGPONG_URL || 'http://ping-pong-svc/pings'
 const INFO_FILE = process.env.INFO_FILE || path.join(__dirname, 'config', 'information.txt')
 const MESSAGE = process.env.MESSAGE
+const GREETER_URL = process.env.GREETER_URL || 'http://greeter-svc'
 
 const readFile = (file, fallback) => {
   try {
@@ -27,16 +28,27 @@ const fetchPongs = async () => {
   }
 }
 
+const fetchGreeting = async () => {
+  try {
+    const response = await fetch(GREETER_URL, { signal: AbortSignal.timeout(2000) })
+    return await response.text()
+  } catch (error) {
+    console.error('Could not reach greeter:', error.message)
+    return 'unavailable'
+  }
+}
+
 const status = async () => {
   const lines = readFile(FILE_PATH, '').trim().split('\n')
   const lastLine = lines[lines.length - 1] || 'No log yet'
-  const pongs = await fetchPongs()
+  const [pongs, greeting] = await Promise.all([fetchPongs(), fetchGreeting()])
   const info = readFile(INFO_FILE, '').trim()
   return [
     `file content: ${info}`,
     `env variable: MESSAGE=${MESSAGE}`,
     `${lastLine}.`,
     `Ping / Pongs: ${pongs}`,
+    `greetings: ${greeting}`,
   ].join('\n')
 }
 

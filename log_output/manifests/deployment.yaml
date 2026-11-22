@@ -46,6 +46,8 @@ spec:
               value: /usr/src/app/files/log.txt
             - name: PINGPONG_URL
               value: http://ping-pong-svc/pings
+            - name: GREETER_URL
+              value: http://greeter-svc
             - name: INFO_FILE
               value: /usr/src/app/config/information.txt
             - name: MESSAGE
