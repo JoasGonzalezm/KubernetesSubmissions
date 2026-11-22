@@ -10,7 +10,7 @@ resources:
 images:
 - name: LOG_OUTPUT/READER
   newName: ghcr.io/joasgonzalezm/log-output-reader
-  newTag: 23c9cd1a2bcf1f1c6441d683e5df581cc7bba8a3
+  newTag: 037ded66fd79843a041409f56311530c12f0547c
 - name: LOG_OUTPUT/WRITER
   newName: ghcr.io/joasgonzalezm/log-output-writer
-  newTag: 23c9cd1a2bcf1f1c6441d683e5df581cc7bba8a3
+  newTag: 037ded66fd79843a041409f56311530c12f0547c
