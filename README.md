@@ -44,6 +44,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [3.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.6/.github/workflows) (also [project](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.6/project))
 - [3.7.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.7/.github/workflows)
 - [3.8.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.8/.github/workflows)
+- [3.9.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.9#39-dbaas-vs-diy)
 
 ## Running
 
@@ -387,3 +388,39 @@ deleted (the `main` environment is never deleted).
 git push origin --delete feature-x
 kubectl get namespace feature-x   # gone after the workflow has run
 ```
+
+### 3.9 DBaaS vs DIY
+
+Comparison of a managed database (DBaaS, e.g. Google Cloud SQL for PostgreSQL) and running
+Postgres ourselves in the cluster as a StatefulSet with a PersistentVolumeClaim (DIY), which
+is what the project does now.
+
+**Initialization: work and cost**
+
+| | DBaaS (Cloud SQL) | DIY (StatefulSet + PVC) |
+|---|---|---|
+| Work to set up | A few clicks or one `gcloud sql instances create`. Networking (private IP or the Cloud SQL Auth Proxy sidecar) and IAM need some extra setup. | Write the StatefulSet, headless Service, Secret and volume claim templates. Small for one replica, but replication, failover and connection pooling are all up to us. |
+| Cost to start | Billed per instance even when idle. The smallest shared core instance is cheap but noticeably more than the disk alone. High availability doubles the price. | Only the persistent disk and a share of node resources we pay for anyway. Nearly free in a cluster that already exists. |
+
+**Maintenance**
+
+| | DBaaS | DIY |
+|---|---|---|
+| Updates | Google patches the OS and minor versions in maintenance windows. Major upgrades are a button. | We bump the image tag ourselves, and major versions need `pg_upgrade` or a dump and restore. |
+| Availability | Regional HA with automatic failover is a setting. | One replica means downtime when the pod or node goes away. Real HA needs an operator (CloudNativePG, Zalando) and know how. |
+| Scaling | Change the machine type or enable automatic storage increase. Read replicas are built in. | Edit resources and resize the PVC. Read replicas need an operator or manual streaming replication. |
+| Monitoring | Metrics, logs and query insights in the Cloud Console out of the box. | We must add exporters (postgres_exporter) and dashboards. |
+| Portability | Tied to Google Cloud. | The same manifests run in k3d, GKE or any other cluster. |
+
+**Backups**
+
+| | DBaaS | DIY |
+|---|---|---|
+| Method | Automated daily backups and point in time recovery with a checkbox. | We build them: a CronJob running `pg_dump` and uploading to object storage (exercise 3.10), or volume snapshots. |
+| Restore | Restore to a new instance or a point in time from the console. | Download the dump and `psql` / `pg_restore` it manually. We must test this ourselves. |
+| Ease | Very easy and reliable. | Flexible and cheap, but easy to forget or get wrong until the day it is needed. |
+
+**Summary**: DBaaS costs more money but much less work, and backups, HA and upgrades are
+basically solved. DIY is cheaper and portable, which is fine for a course project or
+development environments, but for production data the operational work and risk of DIY
+usually costs more than the DBaaS bill.
