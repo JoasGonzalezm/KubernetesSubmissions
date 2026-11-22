@@ -70,6 +70,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [5.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.5#55-platform-comparison)
 - [5.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.6/knative)
 - [5.7.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.7/ping_pong/knative) (also [log_output](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.7/log_output))
+- [5.8.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.8#58-landscape)
 
 ## Running
 
@@ -769,3 +770,25 @@ kubectl get ksvc -n exercises ping-pong   # use the IP of the URL in route.yaml
 kubectl apply -f ping_pong/knative/route.yaml
 kubectl apply -k log_output
 ```
+
+### 5.8 Landscape
+
+Used directly:
+
+- Kubernetes, k3s (through k3d) and Google Kubernetes Engine for all the clusters
+- Helm to install Prometheus, Loki, Grafana and NATS in chapters 3 and 5
+- Prometheus for metrics and the Argo Rollouts analysis, Grafana and Loki for logs
+- PostgreSQL as the database of ping-pong and the project
+- NATS for the messaging between the backend and the broadcaster
+- Argo (Argo CD for GitOps and Argo Rollouts for canary releases)
+- Istio and Kiali for the service mesh, Knative for serverless
+- GitHub Actions and Kustomize for CI/CD, SOPS for secrets
+- Google Artifact Registry and GitHub Container Registry for images
+
+Used indirectly:
+
+- containerd as the container runtime of k3s and GKE
+- CoreDNS for the service names inside the clusters
+- Flannel as the network of k3s, Traefik as the k3s ingress controller
+- Envoy inside Istio, Envoy Gateway and Kourier
+- etcd as the storage of the Kubernetes API
