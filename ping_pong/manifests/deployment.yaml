@@ -15,7 +15,13 @@ spec:
     spec:
       containers:
         - name: ping-pong
-          image: ghcr.io/joasgonzalezm/ping-pong:3.4
+          image: ghcr.io/joasgonzalezm/ping-pong:4.1
+          readinessProbe:
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            httpGet:
+              path: /healthz
+              port: 3000
           env:
             - name: PORT
               value: "3000"

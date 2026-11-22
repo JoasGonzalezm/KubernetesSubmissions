@@ -4,7 +4,9 @@ const { Pool } = require('pg')
 const PORT = process.env.PORT || 3000
 
 // Connection settings come from PGHOST, PGUSER, PGPASSWORD, PGDATABASE env variables
-const pool = new Pool()
+const pool = new Pool({ connectionTimeoutMillis: 2000 })
+
+let dbInitialized = false
 
 const initDb = async () => {
   await pool.query(`
@@ -13,14 +15,22 @@ const initDb = async () => {
       value INTEGER NOT NULL
     )`)
   await pool.query('INSERT INTO counter (id, value) VALUES (1, 0) ON CONFLICT (id) DO NOTHING')
+  dbInitialized = true
+}
+
+// Creates the table on first successful connection
+const ensureDb = async () => {
+  if (!dbInitialized) await initDb()
 }
 
 const increment = async () => {
+  await ensureDb()
   const { rows } = await pool.query('UPDATE counter SET value = value + 1 WHERE id = 1 RETURNING value')
   return rows[0].value - 1
 }
 
 const current = async () => {
+  await ensureDb()
   const { rows } = await pool.query('SELECT value FROM counter WHERE id = 1')
   return rows[0].value
 }
@@ -32,8 +42,10 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/plain' })
       return res.end(`pong ${await increment()}`)
     }
-    // GKE load balancer health check, see HealthCheckPolicy
+    // Readiness probe and GKE health check: ready only when the database answers
     if (req.method === 'GET' && req.url === '/healthz') {
+      await ensureDb()
+      await pool.query('SELECT 1')
       res.writeHead(200, { 'Content-Type': 'text/plain' })
       return res.end('ok')
     }
@@ -44,27 +56,12 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(404)
     res.end('Not found')
   } catch (error) {
-    console.error(error)
+    console.error(error.message)
     res.writeHead(500)
     res.end('Internal server error')
   }
 })
 
-const start = async () => {
-  // The database may still be starting, so retry for a while
-  for (let attempt = 1; ; attempt++) {
-    try {
-      await initDb()
-      break
-    } catch (error) {
-      if (attempt >= 30) throw error
-      console.log(`Database not ready (${error.message}), retrying...`)
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-    }
-  }
-  server.listen(PORT, () => {
-    console.log(`Server started in port ${PORT}`)
-  })
-}
-
-start()
+server.listen(PORT, () => {
+  console.log(`Server started in port ${PORT}`)
+})

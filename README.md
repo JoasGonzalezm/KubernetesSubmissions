@@ -48,6 +48,10 @@ Images are built by GitHub Actions on every tag and pushed to
 - [3.10.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.10/todo_backup)
 - [3.11.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.11/project)
 
+### Chapter 5
+
+- [4.1.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.1/ping_pong) (also [log_output](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.1/log_output))
+
 ## Running
 
 ```
@@ -465,4 +469,17 @@ around 30-40Mi of memory and almost no CPU, so they request little and are limit
 
 ```
 kubectl top pods -n project
+```
+
+### 4.1
+
+Readiness probes: ping-pong is ready (`/healthz`) only when the database answers, and the log
+output reader only when ping-pong responds with the count. Without the database:
+
+```
+kubectl delete statefulset -n exercises ping-pong-db
+kubectl get po -n exercises
+# log-output-dep-...   1/2   Running
+# ping-pong-dep-...    0/1   Running
+kubectl apply -f ping_pong/manifests/postgres.yaml   # both become ready
 ```

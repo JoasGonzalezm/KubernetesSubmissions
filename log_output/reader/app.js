@@ -18,7 +18,7 @@ const readFile = (file, fallback) => {
 
 const fetchPongs = async () => {
   try {
-    const response = await fetch(PINGPONG_URL)
+    const response = await fetch(PINGPONG_URL, { signal: AbortSignal.timeout(2000) })
     const { pings } = await response.json()
     return pings
   } catch (error) {
@@ -40,7 +40,22 @@ const status = async () => {
   ].join('\n')
 }
 
+// Ready only when ping-pong responds with the count
+const pingPongReady = async () => {
+  try {
+    const response = await fetch(PINGPONG_URL, { signal: AbortSignal.timeout(2000) })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
 const server = http.createServer(async (req, res) => {
+  if (req.method === 'GET' && req.url === '/healthz') {
+    const ready = await pingPongReady()
+    res.writeHead(ready ? 200 : 500, { 'Content-Type': 'text/plain' })
+    return res.end(ready ? 'ok' : 'ping-pong not available')
+  }
   if (req.method === 'GET' && (req.url === '/' || req.url === '/status')) {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
     return res.end(await status())
