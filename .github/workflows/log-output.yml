@@ -1,0 +1,50 @@
+# GitOps for log output: builds the images and commits the new tags to log_output/kustomization.yaml.
+# ArgoCD (argocd/log-output.yaml) notices the commit and updates the cluster.
+name: Release log output
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'log_output/reader/**'
+      - 'log_output/writer/**'
+      - '.github/workflows/log-output.yml'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-publish-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish images
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          for PART in writer reader; do
+            IMAGE=ghcr.io/$OWNER/log-output-$PART:$GITHUB_SHA
+            docker build --tag $IMAGE log_output/$PART
+            docker push $IMAGE
+          done
+          echo "OWNER=$OWNER" >> $GITHUB_ENV
+
+      - uses: imranismail/setup-kustomize@v2
+
+      - name: Use the new images
+        working-directory: log_output
+        run: |
+          kustomize edit set image LOG_OUTPUT/WRITER=ghcr.io/$OWNER/log-output-writer:$GITHUB_SHA
+          kustomize edit set image LOG_OUTPUT/READER=ghcr.io/$OWNER/log-output-reader:$GITHUB_SHA
+
+      - uses: EndBug/add-and-commit@v9
+        with:
+          add: log_output/kustomization.yaml
+          message: New log output version ${{ github.sha }}

@@ -56,6 +56,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [4.4.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.4/ping_pong)
 - [4.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.5/todo_backend) (also [todo_app](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.5/todo_app))
 - [4.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.6/broadcaster) (also [todo_backend](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.6/todo_backend))
+- [4.7.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.7/log_output) (also [argocd](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.7/argocd) and [workflow](https://github.com/joasgonzalezm/KubernetesSubmissions/blob/4.7/.github/workflows/log-output.yml))
 
 ## Running
 
@@ -568,3 +569,19 @@ kubectl create secret generic broadcaster-secret -n project \
 kubectl apply -k project
 kubectl logs -n project -l app=broadcaster --prefix   # each message appears only once
 ```
+
+### 4.7
+
+Log output uses GitOps. On every push to main that touches its code,
+`.github/workflows/log-output.yml` builds the images, sets the new tags in
+`log_output/kustomization.yaml` with `kustomize edit` and commits the change. The ArgoCD
+Application `argocd/log-output.yaml` follows `log_output/` in main with automatic sync, so
+the cluster is updated by ArgoCD.
+
+```sh
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl apply -f argocd/log-output.yaml
+```
+
+The workflow needs "Read and write permissions" for GitHub Actions in the repository settings.
