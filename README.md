@@ -52,6 +52,7 @@ Images are built by GitHub Actions on every tag and pushed to
 
 - [4.1.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.1/ping_pong) (also [log_output](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.1/log_output))
 - [4.2.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.2/todo_app) (also [todo_backend](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.2/todo_backend))
+- [4.3.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.3#43-prometheus)
 
 ## Running
 
@@ -498,3 +499,20 @@ Probes for the project:
 kubectl apply -k project
 kubectl get po -n project -w   # press "Break the app" and watch RESTARTS increase
 ```
+
+### 4.3 Prometheus
+
+```sh
+sh monitoring/install.sh
+kubectl port-forward svc/prom-prometheus-server -n monitoring 9090:80
+# open http://localhost:9090
+```
+
+Query for the number of pods created by StatefulSets in the namespace `prometheus`:
+
+```promql
+count(kube_pod_info{namespace="prometheus", created_by_kind="StatefulSet"})
+```
+
+With the monitoring stack of this repository the pods are in the namespace `monitoring`, so
+there the query is `count(kube_pod_info{namespace="monitoring", created_by_kind="StatefulSet"})`.
