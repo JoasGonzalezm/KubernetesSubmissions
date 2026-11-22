@@ -43,6 +43,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [3.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.5/project)
 - [3.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.6/.github/workflows) (also [project](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.6/project))
 - [3.7.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.7/.github/workflows)
+- [3.8.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.8/.github/workflows)
 
 ## Running
 
@@ -375,4 +376,14 @@ The database Secret has no namespace so it can be applied to any of them.
 ```
 git switch -c feature-x && git push -u origin feature-x
 kubectl get all -n feature-x
+```
+
+### 3.8
+
+`.github/workflows/delete-environment.yml` deletes the namespace of a branch when the branch is
+deleted (the `main` environment is never deleted).
+
+```
+git push origin --delete feature-x
+kubectl get namespace feature-x   # gone after the workflow has run
 ```
