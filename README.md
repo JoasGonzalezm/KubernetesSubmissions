@@ -61,6 +61,10 @@ Images are built by GitHub Actions on every tag and pushed to
 - [4.9.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.9/project) (also [argocd](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.9/argocd) and [workflows](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.9/.github/workflows))
 - [4.10.](https://github.com/JoasGonzalezm/KubernetesSubmissions-config) (configuration repository, and the [workflows](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.10/.github/workflows) of this repository)
 
+### Chapter 6
+
+- [5.1.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.1/dummysite)
+
 ## Running
 
 ```sh
@@ -642,3 +646,20 @@ The code and the configuration of the project are now in different repositories:
 configuration repository with a deploy key (secret `CONFIG_REPO_DEPLOY_KEY`), set the new image
 tags with `kustomize edit` and push the commit there. ArgoCD follows the configuration
 repository, so the instructions of the earlier project exercises now apply to that repository.
+
+### 5.1
+
+A `DummySite` custom resource (`stable.dwk/v1`, property `website_url`) and a controller
+written in Node.js that talks to the Kubernetes REST API with its service account. For each
+DummySite the controller downloads the page and creates a ConfigMap with the HTML (with a
+`<base>` element so relative links point to the original site), an nginx Deployment serving it
+and a Service. The resources are owned by the DummySite, so deleting it removes them.
+
+```sh
+kubectl apply -f dummysite/manifests/crd.yaml
+kubectl apply -f dummysite/manifests/rbac.yaml
+kubectl apply -f dummysite/manifests/deployment.yaml
+kubectl apply -f dummysite/manifests/dummysite.yaml
+kubectl get dummysites
+kubectl port-forward svc/dummysite-example 8080:80   # open http://localhost:8080
+```
