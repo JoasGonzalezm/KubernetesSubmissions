@@ -1,5 +1,6 @@
 const http = require('http')
 const { Pool } = require('pg')
+const { connect, StringCodec } = require('nats')
 
 const PORT = process.env.PORT
 if (!PORT) throw new Error('Missing environment variable PORT')
@@ -11,6 +12,28 @@ const log = (message, fields = {}) => {
 
 // Connection settings come from PGHOST, PGUSER, PGPASSWORD, PGDATABASE env variables
 const pool = new Pool()
+
+const NATS_URL = process.env.NATS_URL
+const NATS_SUBJECT = 'todos'
+const sc = StringCodec()
+let nats = null
+
+const connectNats = async () => {
+  if (!NATS_URL) return
+  try {
+    nats = await connect({ servers: NATS_URL, maxReconnectAttempts: -1 })
+    log('connected to NATS', { url: NATS_URL })
+  } catch (error) {
+    log('NATS connection failed, retrying', { error: error.message })
+    setTimeout(connectNats, 5000)
+  }
+}
+
+// Messages are best effort: the todo is saved even if NATS is down
+const publish = (action, todo) => {
+  if (!nats) return
+  nats.publish(NATS_SUBJECT, sc.encode(JSON.stringify({ action, todo })))
+}
 
 const initDb = async () => {
   await pool.query(`
@@ -70,6 +93,7 @@ const server = http.createServer(async (req, res) => {
         [text.trim()],
       )
       log('todo created', { todo: rows[0].text })
+      publish('created', rows[0])
       return sendJson(res, 201, rows[0])
     }
     const todoMatch = req.url.match(/^\/todos\/(\d+)$/)
@@ -89,6 +113,7 @@ const server = http.createServer(async (req, res) => {
       )
       if (rows.length === 0) return sendJson(res, 404, { error: 'todo not found' })
       log('todo updated', { id: rows[0].id, done: rows[0].done })
+      publish('updated', rows[0])
       return sendJson(res, 200, rows[0])
     }
     sendJson(res, 404, { error: 'not found' })
@@ -99,6 +124,7 @@ const server = http.createServer(async (req, res) => {
 })
 
 const start = async () => {
+  connectNats()
   // The database may still be starting, so retry for a while
   for (let attempt = 1; ; attempt++) {
     try {

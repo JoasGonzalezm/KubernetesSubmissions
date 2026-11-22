@@ -55,6 +55,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [4.3.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.3#43-prometheus)
 - [4.4.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.4/ping_pong)
 - [4.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.5/todo_backend) (also [todo_app](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.5/todo_app))
+- [4.6.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.6/broadcaster) (also [todo_backend](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/4.6/todo_backend))
 
 ## Running
 
@@ -543,4 +544,27 @@ todo app lists not done and done todos separately with a "Mark as done" button.
 
 ```sh
 curl -X PUT -H 'Content-Type: application/json' -d '{"done":true}' localhost:3001/todos/1
+```
+
+### 4.6
+
+The backend publishes a message to the NATS subject `todos` when a todo is created or updated.
+The new `broadcaster` service subscribes to it and forwards the messages to an external
+service using the "Generic" format:
+
+```json
+{ "user": "bot", "message": "A todo was created: Buy milk" }
+```
+
+The URL comes from the Secret `broadcaster-secret` (key `WEBHOOK_URL`). All broadcaster
+replicas subscribe in the same NATS queue group, so each message is delivered to only one of
+them and it runs with 6 replicas without duplicates.
+
+```sh
+helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+helm upgrade --install my-nats nats/nats --namespace nats --create-namespace
+kubectl create secret generic broadcaster-secret -n project \
+  --from-literal=WEBHOOK_URL=https://webhook.site/<your-id>
+kubectl apply -k project
+kubectl logs -n project -l app=broadcaster --prefix   # each message appears only once
 ```

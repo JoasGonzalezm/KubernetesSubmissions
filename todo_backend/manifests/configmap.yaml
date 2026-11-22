@@ -7,3 +7,4 @@ data:
   PORT: "3000"
   PGHOST: todo-db-svc
   PGDATABASE: todos
+  NATS_URL: nats://my-nats.nats.svc.cluster.local:4222
