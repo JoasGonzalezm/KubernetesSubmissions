@@ -1,0 +1,30 @@
+# Kiali installed with the Kiali operator CR settings embedded in the addon manifest is long,
+# so here only the part that differs from istio-*/samples/addons/kiali.yaml is shown:
+# Prometheus is the one installed by monitoring/install.sh to the monitoring namespace.
+#
+#   kubectl apply -f istio-*/samples/addons/kiali.yaml
+#   kubectl apply -f istio/kiali.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kiali
+  namespace: istio-system
+  labels:
+    app: kiali
+data:
+  config.yaml: |
+    auth:
+      strategy: anonymous
+    deployment:
+      accessible_namespaces: ["**"]
+    external_services:
+      prometheus:
+        enabled: true
+        url: http://prom-prometheus-server.monitoring:80
+      grafana:
+        enabled: false
+      tracing:
+        enabled: false
+    server:
+      port: 20001
+      web_root: /kiali

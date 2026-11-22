@@ -64,6 +64,7 @@ Images are built by GitHub Actions on every tag and pushed to
 ### Chapter 6
 
 - [5.1.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.1/dummysite)
+- [5.2.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/5.2/istio)
 
 ## Running
 
@@ -414,27 +415,27 @@ Comparison of a managed database (DBaaS, e.g. Google Cloud SQL for PostgreSQL) a
 Postgres ourselves in the cluster as a StatefulSet with a PersistentVolumeClaim (DIY), which
 is what the project does now.
 
-**Initialization: work and cost**
+#### Initialization: work and cost
 
 | | DBaaS (Cloud SQL) | DIY (StatefulSet + PVC) |
-|---|---|---|
+| --- | --- | --- |
 | Work to set up | A few clicks or one `gcloud sql instances create`. Networking (private IP or the Cloud SQL Auth Proxy sidecar) and IAM need some extra setup. | Write the StatefulSet, headless Service, Secret and volume claim templates. Small for one replica, but replication, failover and connection pooling are all up to us. |
 | Cost to start | Billed per instance even when idle. The smallest shared core instance is cheap but noticeably more than the disk alone. High availability doubles the price. | Only the persistent disk and a share of node resources we pay for anyway. Nearly free in a cluster that already exists. |
 
-**Maintenance**
+#### Maintenance
 
 | | DBaaS | DIY |
-|---|---|---|
+| --- | --- | --- |
 | Updates | Google patches the OS and minor versions in maintenance windows. Major upgrades are a button. | We bump the image tag ourselves, and major versions need `pg_upgrade` or a dump and restore. |
 | Availability | Regional HA with automatic failover is a setting. | One replica means downtime when the pod or node goes away. Real HA needs an operator (CloudNativePG, Zalando) and know how. |
 | Scaling | Change the machine type or enable automatic storage increase. Read replicas are built in. | Edit resources and resize the PVC. Read replicas need an operator or manual streaming replication. |
 | Monitoring | Metrics, logs and query insights in the Cloud Console out of the box. | We must add exporters (postgres_exporter) and dashboards. |
 | Portability | Tied to Google Cloud. | The same manifests run in k3d, GKE or any other cluster. |
 
-**Backups**
+#### Backups
 
 | | DBaaS | DIY |
-|---|---|---|
+| --- | --- | --- |
 | Method | Automated daily backups and point in time recovery with a checkbox. | We build them: a CronJob running `pg_dump` and uploading to object storage (exercise 3.10), or volume snapshots. |
 | Restore | Restore to a new instance or a point in time from the console. | Download the dump and `psql` / `pg_restore` it manually. We must test this ourselves. |
 | Ease | Very easy and reliable. | Flexible and cheap, but easy to forget or get wrong until the day it is needed. |
@@ -473,7 +474,7 @@ around 30-40Mi of memory and almost no CPU, so they request little and are limit
 128Mi; Postgres and the backup job (gcloud CLI) get more memory.
 
 | Container | CPU request / limit | Memory request / limit |
-|---|---|---|
+| --- | --- | --- |
 | todo-app | 10m / 200m | 48Mi / 128Mi |
 | todo-backend | 10m / 200m | 48Mi / 128Mi |
 | postgres | 25m / 500m | 64Mi / 256Mi |
@@ -611,7 +612,7 @@ kubectl apply -f argocd/project.yaml
 The project has two environments built with Kustomize overlays on top of `project/base`:
 
 | | staging | production |
-|---|---|---|
+| --- | --- | --- |
 | Namespace | `staging` | `production` |
 | Deployed when | every commit to main (`project.yml`) | every tagged commit (`production.yml`) |
 | Broadcaster | only logs the messages (`WEBHOOK_URL` removed by a patch) | forwards to the webhook |
@@ -662,4 +663,17 @@ kubectl apply -f dummysite/manifests/deployment.yaml
 kubectl apply -f dummysite/manifests/dummysite.yaml
 kubectl get dummysites
 kubectl port-forward svc/dummysite-example 8080:80   # open http://localhost:8080
+```
+
+### 5.2
+
+Istio in ambient mode on k3d with the Bookinfo sample app, followed until "Clean up" of the
+getting started guide. `istio/setup.sh` has the steps; Kiali uses the Prometheus of
+`monitoring/install.sh` (`istio/kiali.yaml`).
+
+```sh
+sh monitoring/install.sh
+sh istio/setup.sh
+kubectl port-forward svc/bookinfo-gateway-istio 8080:80   # http://localhost:8080/productpage
+istioctl dashboard kiali
 ```
