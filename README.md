@@ -40,6 +40,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [3.2.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.2/log_output) (also [ping_pong](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.2/ping_pong))
 - [3.3.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.3/log_output) (also [ping_pong](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.3/ping_pong))
 - [3.4.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.4/ping_pong)
+- [3.5.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.5/project)
 
 ## Running
 
@@ -310,4 +311,17 @@ increase the counter.
 ```
 kubectl apply -f ping_pong/manifests
 # open http://<ADDRESS>/pingpong
+```
+
+### 3.5
+
+The project is deployed with Kustomize: `project/kustomization.yaml` combines the manifests
+of todo_app, todo_backend and todo_cronjob, sets the namespace and the images. The image
+cache PVC uses the default storage class, so it works both in k3d and GKE.
+
+```
+kubectl create namespace project
+sops --decrypt todo_backend/secrets/secret.enc.yaml | kubectl apply -f -
+kubectl apply -k project
+kubectl get ingress -n project   # wait for ADDRESS
 ```

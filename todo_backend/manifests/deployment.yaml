@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: todo-backend
-          image: ghcr.io/joasgonzalezm/todo-backend:2.10
+          image: PROJECT/TODO_BACKEND
           envFrom:
             - configMapRef:
                 name: todo-backend-config
