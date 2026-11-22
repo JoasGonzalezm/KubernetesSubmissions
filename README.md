@@ -46,6 +46,7 @@ Images are built by GitHub Actions on every tag and pushed to
 - [3.8.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.8/.github/workflows)
 - [3.9.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.9#39-dbaas-vs-diy)
 - [3.10.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.10/todo_backup)
+- [3.11.](https://github.com/joasgonzalezm/KubernetesSubmissions/tree/3.11/project)
 
 ## Running
 
@@ -446,4 +447,22 @@ rm key.json
 
 kubectl create job -n project --from=cronjob/todo-db-backup todo-db-backup-now   # test it
 gcloud storage ls gs://dwk-todo-backups
+```
+
+### 3.11
+
+Every container of the project has resource requests and limits. The Node apps idle at
+around 30-40Mi of memory and almost no CPU, so they request little and are limited to
+128Mi; Postgres and the backup job (gcloud CLI) get more memory.
+
+| Container | CPU request / limit | Memory request / limit |
+|---|---|---|
+| todo-app | 10m / 200m | 48Mi / 128Mi |
+| todo-backend | 10m / 200m | 48Mi / 128Mi |
+| postgres | 25m / 500m | 64Mi / 256Mi |
+| wikipedia-todo (CronJob) | 10m / 100m | 32Mi / 64Mi |
+| backup (CronJob) | 50m / 500m | 128Mi / 256Mi |
+
+```
+kubectl top pods -n project
 ```

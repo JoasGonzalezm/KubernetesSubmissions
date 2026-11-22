@@ -19,6 +19,13 @@ spec:
           containers:
             - name: backup
               image: PROJECT/TODO_BACKUP
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: 128Mi
+                limits:
+                  cpu: "500m"
+                  memory: 256Mi
               envFrom:
                 - configMapRef:
                     name: todo-backend-config
